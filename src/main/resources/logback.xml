@@ -1,0 +1,110 @@
+<configuration>
+    <!-- Console Appender -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %msg%n</pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>INFO</level>
+        </filter>
+    </appender>
+
+    <appender name="bootstrap" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/Bootstrap.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="server" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/APIServer.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="credential" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/Credential.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}][%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="discovery" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/Discovery.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="provision" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/Provision.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="processing" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/Processing.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="polling" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/PollingEngine.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+    <!-- Root Logger -->
+    <root level="info">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+    <!-- Logger for Server -->
+    <logger name="com.motadata.api.APIServer" level="trace" additivity="false">
+        <appender-ref ref="server"/>
+    </logger>
+
+    <!-- Logger for Discovery  -->
+    <logger name="com.motadata.engine.DiscoveryEngine" level="trace" additivity="false">
+        <appender-ref ref="discovery"/>
+    </logger>
+
+
+    <!-- Logger for Credential Router  -->
+    <logger name="com.motadata.api.Credential" level="trace" additivity="false">
+        <appender-ref ref="credential"/>
+    </logger>
+
+
+    <!-- Logger for Discovery Router -->
+    <logger name="com.motadata.api.Discovery" level="trace" additivity="false">
+        <appender-ref ref="discovery"/>
+    </logger>
+
+
+    <!-- Logger for Provision  -->
+    <logger name="com.motadata.api.Provision" level="trace" additivity="false">
+        <appender-ref ref="provision"/>
+    </logger>
+
+    <!-- Logger for Processing  -->
+    <logger name="com.motadata.util.ProcessUtil" level="trace" additivity="false">
+        <appender-ref ref="processing"/>
+    </logger>
+
+    <!-- Logger for Polling Engine  -->
+    <logger name="com.motadata.engine.PollingEngine" level="trace" additivity="false">
+        <appender-ref ref="polling"/>
+    </logger>
+
+    <!-- Logger for Bootstrap  -->
+    <logger name="com.motadata.Bootstrap" level="trace" additivity="false">
+        <appender-ref ref="bootstrap"/>
+    </logger>
+
+</configuration>
