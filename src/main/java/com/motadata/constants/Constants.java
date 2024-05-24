@@ -4,9 +4,11 @@ public class Constants
 {
     public static final int PORT = 1428;
 
-    public static final String ERROR_NAME = "error_name";
+    public static final String STATUS = "status";
 
-    public static final String ERROR_MESSAGE = "error_message";
+    public static final String ERROR_MESSAGE = "error.message";
+
+    public static final String SUCCESS_MESSAGE = "success.message";
 
     public static final String CREDENTIAL_PROFILE_ID = "credentialProfileId";
 
@@ -16,13 +18,15 @@ public class Constants
 
     public static final String KEY_CREDENTIAL_ID = "credential.profile.id";
 
+    public static final String KEY_DISCOVERY_ID = "discovery.profile.id";
+
     public static final String DISCOVERY_ROUTE = "discovery-profile";
 
     public static final String DISCOVERY_PROFILE_ID = "discoveryProfileId";
 
     public static final String RUN_DISCOVERY = "run-discovery/";
 
-    public static final String PROVISION_DEVICE = "provision-device";
+    public static final String PROVISION_ROUTE = "provision-device";
 
     public static final int SUCCESS_STATUS = 200;
 
@@ -37,4 +41,12 @@ public class Constants
     public static final int POLLING_INTERVAL = 300;
 
     public static final long WAITING_TIME = 60;
+
+    public static final String RUN_DISCOVERY_ADDRESS="run-discovery-address";
+
+    public static final String POLLING_DATA_STORE="/home/vaibhav/IdeaProjects/NMS-Lite-Backend/files/";
+
+    public static final String AES_KEY = "465DA7D9A240D75A561C084D3509BEF0";
+
+    public static final String ZMQ_ADDRESS="tcp://localhost:5555";
 }

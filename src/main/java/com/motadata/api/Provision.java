@@ -1,8 +1,10 @@
 package com.motadata.api;
 
 import com.motadata.constants.Constants;
+import com.motadata.db.CredentialDatabase;
 import com.motadata.db.Database;
-import com.motadata.db.DatabaseUtils;
+import com.motadata.db.DiscoveryDatabase;
+import com.motadata.util.Util;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.Router;
 import org.slf4j.Logger;
@@ -12,32 +14,35 @@ public class Provision
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(Provision.class);
 
+    static DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
+
     public static Router getRouter(Vertx vertx)
     {
         Router router = Router.router(vertx);
 
         // Provisioning device route
-        router.post("/:"+Constants.DISCOVERY_PROFILE_ID).handler(routingContext ->
+        router.post("/:" + Constants.DISCOVERY_PROFILE_ID).handler(routingContext ->
         {
             try
             {
-                int discoveryProfileId = Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID));
+                var discoveryProfileId = Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID));
 
-                if (DatabaseUtils.isValidDiscoveryId(discoveryProfileId))
+                var discoveryProfile = discoveryDatabase.get(discoveryProfileId);
+
+                if (discoveryProfile.containsKey("is.discovered"))
                 {
-                    var discoveryProfile=Database.getDatabase(Constants.DISCOVERY_ROUTE).get(discoveryProfileId);
-
                     if (discoveryProfile != null)
                     {
-                        discoveryProfile.put("plugin.type","Collect");
+                        discoveryProfile.put("plugin.type", "Collect");
 
-                        DatabaseUtils.provisionDiscoveryId(discoveryProfileId, discoveryProfile);
+                        discoveryProfile.put("is.provisioned",true);
 
                         LOGGER.info("Discovery Profile Updated Successfully");
 
-                        LOGGER.info("Provisioned Discovery IDs: {}", DatabaseUtils.getProvisionedDiscoveryIds());
+                        //TODO
+//                        LOGGER.trace("Provisioned Discovery IDs: {}", discoveryProfile.get());
 
-                        routingContext.response().setStatusCode(Constants.SUCCESS_STATUS).end("Discovery Profile Provisioned Successfully");
+                        Util.successHandler(routingContext,"Discovery Profile Provisioned Successfully");
                     }
                     else
                     {
@@ -46,14 +51,14 @@ public class Provision
                 }
                 else
                 {
-                    routingContext.response().setStatusCode(Constants.BAD_REQUEST_STATUS).end("Invalid discovery profile ID.");
+                    Util.errorHandler(routingContext, Constants.BAD_REQUEST_STATUS, "Invalid discovery profile ID");
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                LOGGER.error("Error during provisioning process:", e);
+                LOGGER.error("Error during provisioning process:", exception);
 
-                routingContext.response().setStatusCode(Constants.ERROR_STATUS).end("Error during provisioning process.");
+                Util.errorHandler(routingContext, Constants.ERROR_STATUS, "Error during provisioning process");
             }
         });
 

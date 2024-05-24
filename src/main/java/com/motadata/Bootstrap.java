@@ -1,8 +1,7 @@
 package com.motadata;
 
 import com.motadata.api.APIServer;
-import com.motadata.constants.Constants;
-import com.motadata.db.Database;
+import com.motadata.engine.DiscoveryEngine;
 import com.motadata.engine.PollingEngine;
 import io.vertx.core.Vertx;
 import org.slf4j.Logger;
@@ -16,13 +15,10 @@ public class Bootstrap
 
     public static void main(String[] args)
     {
-        Database.createDatabase(Constants.CREDENTIAL_ROUTE);
-
-        Database.createDatabase(Constants.DISCOVERY_ROUTE);
-
         vertx.deployVerticle(APIServer.class.getName())
-                .compose(future-> vertx.deployVerticle(PollingEngine.class.getName())
-                        .onSuccess(event -> LOGGER.info("API Server and Polling Engine deployed successfully"))
-                        .onFailure(event -> LOGGER.info("API Server and Polling Engine deployment failed: {}", event.getMessage())));
+                .compose(compositeFuture -> vertx.deployVerticle(DiscoveryEngine.class.getName()))
+                .compose(future -> vertx.deployVerticle(PollingEngine.class.getName())
+                        .onSuccess(event -> LOGGER.info("API Server, Polling Engine and Scheduling Engine deployed successfully"))
+                        .onFailure(event -> LOGGER.info("API Server, Polling Engine and Scheduling Engine deployment failed: {}", event.getMessage())));
     }
 }

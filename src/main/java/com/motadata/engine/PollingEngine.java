@@ -1,7 +1,7 @@
 package com.motadata.engine;
 
 import com.motadata.constants.Constants;
-import com.motadata.db.DatabaseUtils;
+import com.motadata.db.DiscoveryDatabase;
 import com.motadata.util.Util;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -9,65 +9,122 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.zeromq.SocketType;
+import org.zeromq.ZContext;
+import org.zeromq.ZMQ;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
 public class PollingEngine extends AbstractVerticle
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(PollingEngine.class);
 
+    private static final DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
+
     @Override
     public void start(Promise<Void> startPromise)
     {
-        var pollingTime = Constants.POLLING_INTERVAL * 1000;
+        LOGGER.info("Starting Scheduling Engine");
 
-        vertx.setPeriodic(pollingTime, id ->
+        vertx.setPeriodic(Constants.POLLING_INTERVAL*1000, id ->
         {
-            // Get the map of provisioned discovery profiles
-            var provisionedDiscoveryIds = DatabaseUtils.getPollingQualifiedProfiles(); //limitation add that deleting disc profile will stop provisioning and polling
+            var discoveryProfiles = discoveryDatabase.get();
 
-            if (!provisionedDiscoveryIds.isEmpty())
+            var provisionedDiscoveryProfiles = new JsonArray();
+
+            for (Object profile : discoveryProfiles)
             {
-                System.out.println(provisionedDiscoveryIds);
-
-                for (var entry : provisionedDiscoveryIds.entrySet())
+                if (profile instanceof JsonObject jsonProfile && jsonProfile.containsKey("is.provisioned"))
                 {
-                    fetchData(entry.getValue(), entry.getKey());
+                    provisionedDiscoveryProfiles.add(jsonProfile);
                 }
             }
-            else
+
+            if (!provisionedDiscoveryProfiles.isEmpty())
             {
-                LOGGER.info("No provisioned discovery profiles found.");
+                sendProvisionedProfiles(provisionedDiscoveryProfiles);
             }
         });
     }
 
-    private void fetchData(JsonObject discoveryProfile, int discoveryProfileId)
+    private void sendProvisionedProfiles(JsonArray provisionedDiscoveryProfiles)
     {
-        vertx.executeBlocking(event ->
-                        {
-                            try
-                            {
-                                var discoveryProfileJson = new JsonArray();
+        try (ZContext context = new ZContext())
+        {
+            vertx.executeBlocking(event ->
+            {
+                ZMQ.Socket requester = context.createSocket(SocketType.REQ);
 
-                                discoveryProfileJson.add(discoveryProfile);
+                requester.connect(Constants.ZMQ_ADDRESS);
 
-                                String encodedJson = Base64.getEncoder().encodeToString(discoveryProfileJson.encode().getBytes());
+                requester.send(provisionedDiscoveryProfiles.encode().getBytes(), 0);
 
-                                var decodedString = Util.executeProcess(encodedJson);
+                var reply = requester.recv(0);
 
-                                Util.dumpData(discoveryProfile.getString("ip"), decodedString);
+                var encryptedData = new String(reply);
 
-                                LOGGER.info("Received data for discovery profile ID: {}", discoveryProfileId);
+                LOGGER.info("Received encrypted data from poller: {}", encryptedData);
 
-                                LOGGER.info("Polled Data: {}", new JsonArray(decodedString).encode());
-                            }
-                            catch (Exception e)
-                            {
-                                LOGGER.error("Error in fetching data from plugin engine for Discovery Profile ID {}: {}", discoveryProfileId, e.getMessage());
-                            }
-                        }
-                ).onSuccess(future -> LOGGER.info("Discovery Profile ID {} fetched successfully", discoveryProfileId))
-                .onFailure(future -> LOGGER.info("Discovery Profile ID {} fetching failed", discoveryProfileId));
+                processEncryptedData(encryptedData, provisionedDiscoveryProfiles);
+            });
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Error in communicating with poller: {}", e.getMessage());
+        }
+    }
+
+    private void processEncryptedData(String encryptedData, JsonArray provisionedDiscoveryProfiles)
+    {
+        try
+        {
+            // Decrypt the data
+            var decodedData = Base64.getDecoder().decode(encryptedData);
+
+            var aesKey = new SecretKeySpec(Constants.AES_KEY.getBytes(), "AES");
+
+            var cipher = Cipher.getInstance("AES");
+
+            cipher.init(Cipher.DECRYPT_MODE, aesKey);
+
+            var decryptedData = cipher.doFinal(decodedData);
+
+            var decodedString = new String(decryptedData);
+
+            if (decodedString != null)
+            {
+                for (var profile : provisionedDiscoveryProfiles)
+                {
+                    if (profile instanceof JsonObject jsonProfile)
+                    {
+                        var ip = jsonProfile.getString("ip");
+
+                        LOGGER.info("IP: {}", ip);
+
+                        var future = Util.dumpData(vertx, ip, decodedString);
+
+                        if (future.succeeded())
+                            LOGGER.info("Data dumped into file for IP: {}", ip);
+
+                        if (future.failed())
+                            LOGGER.warn("Data dumping failed for IP: {} \n Cause: {}", ip, future.cause().getMessage());
+
+                        LOGGER.info("Received data for discovery profile ID: {}", jsonProfile.getString("discovery.id"));
+
+                        LOGGER.trace("Polled Data: {}", new JsonArray(decodedString).encode());
+                    }
+                }
+            }
+            else
+            {
+                LOGGER.warn("No data received from poller");
+            }
+        }
+        catch (Exception exception)
+        {
+            LOGGER.error("Error in decrypting data: {}", exception.getMessage());
+        }
     }
 }

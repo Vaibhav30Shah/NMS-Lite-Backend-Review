@@ -1,20 +1,18 @@
 package com.motadata.api;
 
 import com.motadata.constants.Constants;
+import com.motadata.db.CredentialDatabase;
 import com.motadata.db.Database;
-import com.motadata.db.DatabaseUtils;
-import com.motadata.engine.DiscoveryEngine;
+import com.motadata.db.DiscoveryDatabase;
 import com.motadata.util.Util;
 import io.vertx.core.Vertx;
-import io.vertx.core.impl.Utils;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
 
 public class Discovery
 {
-    static Database database = Database.getDatabase(Constants.DISCOVERY_ROUTE);
+    static DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
 
     public static Router getRouter(Vertx vertx)
     {
@@ -27,57 +25,61 @@ public class Discovery
             {
                 var discoveryProfile = body.toJsonObject();
 
-                var credentialProfileIds = discoveryProfile.getJsonArray(Constants.CREDENTIAL_PROFILE);
-
-                var processedCredentialProfiles = new JsonArray();
-
-                var atLeastOneProfileFound = false;
-
-                for (Object credentialProfileObj : credentialProfileIds)
+                if (Util.validateDiscovery(discoveryProfile.getInteger("port")))
                 {
-                    if (credentialProfileObj instanceof JsonObject credentialProfileJson)
+                    var credentialProfileIds = discoveryProfile.getJsonArray(Constants.CREDENTIAL_PROFILE);
+
+                    var processedCredentialProfiles = new JsonArray();
+
+                    var atLeastOneProfileFound = false;
+
+                    for (Object credentialProfileObj : credentialProfileIds)
                     {
-                        Integer id = credentialProfileJson.getInteger(Constants.KEY_CREDENTIAL_ID);
-
-                        if (id != null)
+                        if (credentialProfileObj instanceof JsonObject credentialProfileJson)
                         {
-                            var credentialDatabase = Database.getDatabase(Constants.CREDENTIAL_ROUTE);
+                            Integer id = credentialProfileJson.getInteger(Constants.KEY_CREDENTIAL_ID);
 
-                            JsonObject credProfile = credentialDatabase.get(id);
-
-                            if (credProfile != null)
+                            if (id != null)
                             {
-                                processedCredentialProfiles.add(credProfile);
+                                var credentialDatabase = new CredentialDatabase();
 
-                                atLeastOneProfileFound = true;
+                                JsonObject credProfile = credentialDatabase.get(id);
 
-                                break;
+                                if (credProfile != null)
+                                {
+                                    credProfile.put("is.bound",true);
+
+                                    processedCredentialProfiles.add(credProfile);
+
+                                    atLeastOneProfileFound = true;
+
+                                    break;
+                                }
                             }
                         }
                     }
-                }
 
-                if (atLeastOneProfileFound)
-                {
-                    discoveryProfile.put(Constants.CREDENTIAL_PROFILE, processedCredentialProfiles);
+                    if (atLeastOneProfileFound)
+                    {
+                        discoveryProfile.put(Constants.CREDENTIAL_PROFILE, processedCredentialProfiles);
 
-                    database.create(discoveryProfile);
+                        discoveryDatabase.create(discoveryProfile);
 
-                    routingContext.response()
-                            .setStatusCode(Constants.SUCCESS_STATUS)
-                            .putHeader("Content-Type", "text/plain")
-                            .end("Discovery Profile Created successfully");
+                        Util.successHandler(routingContext,"Discovery profile created successfully");
+                    }
+                    else
+                    {
+                        Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"None of the credential profiles exist.");
+                    }
                 }
                 else
                 {
-                    routingContext.response()
-                            .setStatusCode(Constants.NOT_FOUND_STATUS)
-                            .end("None of the provided credential profiles exist.");
+                    Util.errorHandler(routingContext,Constants. BAD_REQUEST_STATUS,"Invalid discovery port");
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
             }
         }));
 
@@ -86,15 +88,13 @@ public class Discovery
         {
             try
             {
-                var allProfiles = database.get();
-
                 routingContext.response()
                         .putHeader("Content-Type", "application/json")
-                        .end(allProfiles.encode());
+                        .end(discoveryDatabase.get().encode());
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
             }
         });
 
@@ -103,9 +103,7 @@ public class Discovery
         {
             try
             {
-                int discoveryProfileId = Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID));
-
-                var discoveryProfile = database.get(discoveryProfileId);
+                var discoveryProfile = discoveryDatabase.get(Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID)));
 
                 if (discoveryProfile != null)
                 {
@@ -115,12 +113,12 @@ public class Discovery
                 }
                 else
                 {
-                    routingContext.response().setStatusCode(Constants.NOT_FOUND_STATUS).end("Discovery profile not found");
+                    Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"Discovery profile not found");
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
             }
         });
 
@@ -129,48 +127,53 @@ public class Discovery
         {
             try
             {
-                int discoveryProfileId = Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID));
+                var updatedDiscoveryProfile = body.toJsonObject();
 
-                JsonObject updatedDiscoveryProfile = body.toJsonObject();
-
-                JsonArray credentialProfileIds = updatedDiscoveryProfile.getJsonArray(Constants.CREDENTIAL_PROFILE, new JsonArray());
-
-                boolean allCredentialsExist = true;
-
-                for (Object credentialProfileObj : credentialProfileIds)
+                if (Util.validateDiscovery(updatedDiscoveryProfile.getInteger("port")))
                 {
-                    if (credentialProfileObj instanceof JsonObject credentialProfileJson)
+                    var credentialProfileIds = updatedDiscoveryProfile.getJsonArray(Constants.CREDENTIAL_PROFILE, new JsonArray());
+
+                    var allCredentialsExist = true;
+
+                    for (var credentialProfileObj : credentialProfileIds)
                     {
-                        Integer credentialId = credentialProfileJson.getInteger(Constants.KEY_CREDENTIAL_ID);
-
-                        if (credentialId != null && database.get(credentialId) == null)
+                        if (credentialProfileObj instanceof JsonObject credentialProfileJson)
                         {
-                            allCredentialsExist = false;
+                            var credentialId = credentialProfileJson.getInteger(Constants.KEY_CREDENTIAL_ID);
 
-                            break;
+                            if (credentialId != null && discoveryDatabase.get(credentialId) == null)
+                            {
+                                allCredentialsExist = false;
+
+                                break;
+                            }
                         }
                     }
-                }
 
-                if (allCredentialsExist)
-                {
-                    if (database.update(updatedDiscoveryProfile, discoveryProfileId))
+                    if (allCredentialsExist)
                     {
-                        routingContext.response().setStatusCode(Constants.SUCCESS_STATUS).end("Discovery Profile Updated Successfully");
+                        if (discoveryDatabase.update(updatedDiscoveryProfile, Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID))))
+                        {
+                            Util.successHandler(routingContext,"Discovery profile updated successfully");
+                        }
+                        else
+                        {
+                            Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"Discovery profile in use or not found");
+                        }
                     }
                     else
                     {
-                        routingContext.response().setStatusCode(Constants.NOT_FOUND_STATUS).end("Discovery profile not found");
+                        Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"One or more credential profiles does not exist.");
                     }
                 }
                 else
                 {
-                    routingContext.response().setStatusCode(Constants.NOT_FOUND_STATUS).end("One or more credential profiles do not exist.");
+                    Util.errorHandler(routingContext,Constants.BAD_REQUEST_STATUS,"Invalid Discovery port");
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
             }
         }));
 
@@ -179,20 +182,18 @@ public class Discovery
         {
             try
             {
-                int discoveryProfileId = Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID));
-
-                if (database.delete(discoveryProfileId))
+                if (discoveryDatabase.delete(Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID))))
                 {
-                    routingContext.response().setStatusCode(Constants.SUCCESS_STATUS).end("Discovery Profile Deleted Successfully");
+                    Util.successHandler(routingContext,"Discovery profile deleted successfully");
                 }
                 else
                 {
-                    routingContext.response().setStatusCode(Constants.NOT_FOUND_STATUS).end("Discovery profile not found");
+                    Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"Discovery profile in use or not found");
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
             }
         });
 
@@ -201,22 +202,46 @@ public class Discovery
         {
             try
             {
-                int discoveryProfileId = Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID));
+                var discoveryProfileId = Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID));
 
-                var discoveryProfile = database.get(discoveryProfileId);
-
-                if (discoveryProfile != null)
+                if (discoveryDatabase.get(discoveryProfileId) != null)
                 {
-                    DiscoveryEngine.runDiscovery(discoveryProfile, DatabaseUtils.getDiscoveryProfileArray(), DatabaseUtils.getValidDiscoveryIds(), discoveryProfileId, routingContext, vertx);
+                    vertx.eventBus().send(Constants.RUN_DISCOVERY_ADDRESS, discoveryProfileId);
+
+                    Util.successHandler(routingContext,"Your request is being processed. It will be served in 60 seconds.");
                 }
                 else
                 {
-                    routingContext.response().setStatusCode(Constants.NOT_FOUND_STATUS).end("Discovery profile not found.");
+                    Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"Discovery profile not found");
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
+            }
+        });
+
+        // Get discovery results
+        router.get("/get-run-discovery-data/:" + Constants.DISCOVERY_PROFILE_ID).handler(routingContext ->
+        {
+            try
+            {
+                var discoveryResults = discoveryDatabase.get(Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID)));
+
+                if (discoveryResults!=null && discoveryResults.containsKey("is.discovered"))
+                {
+                    routingContext.response()
+                            .putHeader("Content-Type", "application/json")
+                            .end(discoveryResults.encode());
+                }
+                else
+                {
+                    Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"Discovery profile not found");
+                }
+            }
+            catch (Exception exception)
+            {
+                Util.exceptionHandler(routingContext, exception);
             }
         });
 

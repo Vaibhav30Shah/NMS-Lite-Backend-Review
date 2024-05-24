@@ -2,7 +2,6 @@ package com.motadata.api;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
-import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
 import com.motadata.constants.Constants;
 import org.slf4j.Logger;
@@ -10,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 public class APIServer extends AbstractVerticle
 {
-    private static final Logger LOGGER = LoggerFactory.getLogger(APIServer.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(APIServer.class);
 
     @Override
     public void start(Promise<Void> startPromise)
@@ -30,7 +29,7 @@ public class APIServer extends AbstractVerticle
         router.route("/" + Constants.DISCOVERY_ROUTE + "/*").subRouter(Discovery.getRouter(vertx));
 
         // Provisioning route
-        router.route("/" + Constants.PROVISION_DEVICE + "/*").subRouter(Provision.getRouter(vertx));
+        router.route("/" + Constants.PROVISION_ROUTE + "/*").subRouter(Provision.getRouter(vertx));
 
         server.requestHandler(router).listen(Constants.PORT)
                 .onSuccess(event ->
@@ -43,7 +42,7 @@ public class APIServer extends AbstractVerticle
                 {
                     startPromise.fail(event);
 
-                    LOGGER.info("API Server failed to start on port {}", Constants.PORT);
+                    LOGGER.warn("API Server failed to start on port {}", Constants.PORT);
                 });
     }
 }

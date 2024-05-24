@@ -1,15 +1,16 @@
 package com.motadata.api;
 
 import com.motadata.constants.Constants;
+import com.motadata.db.CredentialDatabase;
 import com.motadata.db.Database;
+import com.motadata.db.DiscoveryDatabase;
 import com.motadata.util.Util;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 
 public class Credential
 {
-    static Database database=Database.getDatabase(Constants.CREDENTIAL_ROUTE);
+    static CredentialDatabase credentialDatabase=new CredentialDatabase();
 
     public static Router getRouter(Vertx vertx)
     {
@@ -20,16 +21,22 @@ public class Credential
         {
             try
             {
-                database.create(body.toJsonObject());
+                var credential = body.toJsonObject();
 
-                routingContext.response()
-                        .setStatusCode(Constants.SUCCESS_STATUS)
-                        .putHeader("Content-Type", "Text/plain")
-                        .end("Credential Profile created successfully");
+                if (Util.validateCredential(credential.getString("community"), credential.getString("version")))
+                {
+                    credentialDatabase.create(credential);
+
+                    Util.successHandler(routingContext, "Credential profile created successfully");
+                }
+                else
+                {
+                    Util.errorHandler(routingContext, Constants.BAD_REQUEST_STATUS, "Invalid credential");
+                }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
             }
         }));
 
@@ -38,7 +45,7 @@ public class Credential
         {
             try
             {
-                var credentialProfile = database.get(Integer.parseInt(routingContext.request().getParam(Constants.CREDENTIAL_PROFILE_ID)));
+                var credentialProfile = credentialDatabase.get(Integer.parseInt(routingContext.request().getParam(Constants.CREDENTIAL_PROFILE_ID)));
 
                 if (credentialProfile != null)
                 {
@@ -48,12 +55,12 @@ public class Credential
                 }
                 else
                 {
-                    routingContext.response().setStatusCode(Constants.NOT_FOUND_STATUS).end("Credential profile not found");
+                    Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "Credential profile not found");
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
             }
         });
 
@@ -62,15 +69,13 @@ public class Credential
         {
             try
             {
-                var allProfiles = database.get();
-
                 routingContext.response()
                         .putHeader("Content-Type", "application/json")
-                        .end(database.get().encode());
+                        .end(credentialDatabase.get().encode());
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
             }
         });
 
@@ -79,24 +84,29 @@ public class Credential
         {
             try
             {
-                int credProfileId = Integer.parseInt(routingContext.request().getParam(Constants.CREDENTIAL_PROFILE_ID));
+                var updatedCredentialProfile = body.toJsonObject();
 
-                JsonObject updatedCredentialProfile = body.toJsonObject();
-
-                updatedCredentialProfile.remove(Constants.KEY_CREDENTIAL_ID);
-
-                if (database.update(updatedCredentialProfile, credProfileId))
+                if (Util.validateCredential(updatedCredentialProfile.getString("community"), updatedCredentialProfile.getString("version")))
                 {
-                    routingContext.response().setStatusCode(Constants.SUCCESS_STATUS).end("Credential Profile updated successfully");
+                    updatedCredentialProfile.remove(Constants.KEY_CREDENTIAL_ID);
+
+                    if (credentialDatabase.update(updatedCredentialProfile, Integer.parseInt(routingContext.request().getParam(Constants.CREDENTIAL_PROFILE_ID))))
+                    {
+                        Util.successHandler(routingContext, "Credential profile updated successfully");
+                    }
+                    else
+                    {
+                        Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "Credential profile in use or not found");
+                    }
                 }
                 else
                 {
-                    routingContext.response().setStatusCode(Constants.NOT_FOUND_STATUS).end("Credential profile not found");
+                    Util.errorHandler(routingContext, Constants.BAD_REQUEST_STATUS, "Invalid credential");
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
             }
         }));
 
@@ -105,20 +115,32 @@ public class Credential
         {
             try
             {
-                int credentialProfileId = Integer.parseInt(routingContext.request().getParam(Constants.CREDENTIAL_PROFILE_ID));
+                //TODO:left
+                var discovery = new DiscoveryDatabase();
 
-                if (database.delete(credentialProfileId))
+                var cred = new CredentialDatabase();
+
+                var discoveryProfiles = discovery.get();
+
+//                var credProfile = discoveryProfiles.getJsonArray(Constants.CREDENTIAL_PROFILE);
+
+                for (var discoveryProfile : discoveryProfiles)
                 {
-                    routingContext.response().setStatusCode(Constants.SUCCESS_STATUS).end("Credential Profile Deleted successfully");
+
+                }
+
+                if (credentialDatabase.delete(Integer.parseInt(routingContext.request().getParam(Constants.CREDENTIAL_PROFILE_ID))))
+                {
+                    Util.successHandler(routingContext, "Credential profile deleted successfully");
                 }
                 else
                 {
-                    routingContext.response().setStatusCode(Constants.NOT_FOUND_STATUS).end("Credential profile not found");
+                    Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "Credential profile in use or not found");
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                Util.errorHandler(routingContext, e);
+                Util.exceptionHandler(routingContext, exception);
             }
         });
 
