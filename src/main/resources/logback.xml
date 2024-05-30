@@ -58,6 +58,13 @@
         </encoder>
     </appender>
 
+    <appender name="history" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/HistoricalData.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
 
     <!-- Root Logger -->
     <root level="info">
@@ -100,6 +107,11 @@
     <!-- Logger for Polling Engine  -->
     <logger name="com.motadata.engine.PollingEngine" level="trace" additivity="false">
         <appender-ref ref="polling"/>
+    </logger>
+
+    <!-- Logger for Historical Data  -->
+    <logger name="com.motadata.api.GetHistoricalData" level="trace" additivity="false">
+        <appender-ref ref="history"/>
     </logger>
 
     <!-- Logger for Bootstrap  -->
