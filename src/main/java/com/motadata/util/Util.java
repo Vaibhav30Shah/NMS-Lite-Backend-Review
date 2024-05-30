@@ -96,8 +96,6 @@ public class Util
 
             var now = LocalDateTime.now();
 
-//            data.add(0, "TimeStamp: " + now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-
             var dirPath = Constants.POLLING_DATA_STORE + ip;
 
             var fileName = Constants.POLLING_DATA_STORE + ip + "/" + now + ".txt";
@@ -126,6 +124,7 @@ public class Util
                 else
                 {
                     LOGGER.warn("Error occurred while creating folder {}", result.cause().toString());
+
                     promise.fail(result.cause());
                 }
             });

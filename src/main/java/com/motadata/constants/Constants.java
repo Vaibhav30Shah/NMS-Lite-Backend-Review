@@ -42,11 +42,13 @@ public class Constants
 
     public static final long WAITING_TIME = 60;
 
-    public static final String RUN_DISCOVERY_ADDRESS="run-discovery-address";
+    public static final String RUN_DISCOVERY_ADDRESS = "run-discovery-address";
 
-    public static final String POLLING_DATA_STORE="/home/vaibhav/IdeaProjects/NMS-Lite-Backend/files/";
+    public static final String POLLING_DATA_STORE = "/home/vaibhav/IdeaProjects/NMS-Lite-Backend/files/";
 
     public static final String AES_KEY = "465DA7D9A240D75A561C084D3509BEF0";
 
-    public static final String ZMQ_ADDRESS="tcp://localhost:5555";
+    public static final String ZMQ_ADDRESS = "tcp://*:5555";
+
+    public static final String HISTORICAL_DATA_ROUTE = "api/polling-data";
 }

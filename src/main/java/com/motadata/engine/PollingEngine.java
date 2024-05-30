@@ -23,12 +23,28 @@ public class PollingEngine extends AbstractVerticle
 
     private static final DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
 
+    private ZContext context;
+
+    private ZMQ.Socket dealerSocket;
+
     @Override
     public void start(Promise<Void> startPromise)
     {
         LOGGER.info("Starting Scheduling Engine");
 
-        vertx.setPeriodic(Constants.POLLING_INTERVAL*1000, id ->
+        context = new ZContext();
+
+        dealerSocket = context.createSocket(SocketType.DEALER);
+
+        vertx.executeBlocking(promise ->
+        {
+            dealerSocket.bind(Constants.ZMQ_ADDRESS);
+
+//            System.out.println("Binded dealer socket");
+
+        }, startPromise);
+
+        vertx.setPeriodic(Constants.POLLING_INTERVAL * 1000, id ->
         {
             var discoveryProfiles = discoveryDatabase.get();
 
@@ -47,23 +63,25 @@ public class PollingEngine extends AbstractVerticle
                 sendProvisionedProfiles(provisionedDiscoveryProfiles);
             }
         });
+
+        startPromise.complete();
     }
 
     private void sendProvisionedProfiles(JsonArray provisionedDiscoveryProfiles)
     {
-        try (ZContext context = new ZContext())
+        try
         {
             vertx.executeBlocking(event ->
             {
-                ZMQ.Socket requester = context.createSocket(SocketType.REQ);
+                var provisionedProfiles = Base64.getEncoder().encode(provisionedDiscoveryProfiles.encode().getBytes());
 
-                requester.connect(Constants.ZMQ_ADDRESS);
+                dealerSocket.send(provisionedProfiles, ZMQ.NOBLOCK);
 
-                requester.send(provisionedDiscoveryProfiles.encode().getBytes(), 0);
+                var reply = dealerSocket.recv(ZMQ.NOBLOCK);
 
-                var reply = requester.recv(0);
+                var decodedData = Base64.getDecoder().decode(reply);
 
-                var encryptedData = new String(reply);
+                var encryptedData = new String(decodedData);
 
                 LOGGER.info("Received encrypted data from poller: {}", encryptedData);
 
@@ -81,50 +99,57 @@ public class PollingEngine extends AbstractVerticle
         try
         {
             // Decrypt the data
-            var decodedData = Base64.getDecoder().decode(encryptedData);
+//            var decodedData = Base64.getDecoder().decode(encryptedData);
+//
+//            var aesKey = new SecretKeySpec(Constants.AES_KEY.getBytes(), "AES");
+//
+//            var cipher = Cipher.getInstance("AES");
+//
+//            cipher.init(Cipher.DECRYPT_MODE, aesKey);
+//
+//            var decryptedData = cipher.doFinal(decodedData);
+//
+//            var decodedString = new String(decryptedData);
 
-            var aesKey = new SecretKeySpec(Constants.AES_KEY.getBytes(), "AES");
-
-            var cipher = Cipher.getInstance("AES");
-
-            cipher.init(Cipher.DECRYPT_MODE, aesKey);
-
-            var decryptedData = cipher.doFinal(decodedData);
-
-            var decodedString = new String(decryptedData);
-
-            if (decodedString != null)
+            for (var profile : provisionedDiscoveryProfiles)
             {
-                for (var profile : provisionedDiscoveryProfiles)
+                if (profile instanceof JsonObject jsonProfile)
                 {
-                    if (profile instanceof JsonObject jsonProfile)
-                    {
-                        var ip = jsonProfile.getString("ip");
+                    var ip = jsonProfile.getString("ip");
 
-                        LOGGER.info("IP: {}", ip);
+                    LOGGER.info("IP: {}", ip);
 
-                        var future = Util.dumpData(vertx, ip, decodedString);
+                    var future = Util.dumpData(vertx, ip, encryptedData);
 
-                        if (future.succeeded())
-                            LOGGER.info("Data dumped into file for IP: {}", ip);
+                    if (future.succeeded())
+                        LOGGER.info("Data dumped into file for IP: {}", ip);
 
-                        if (future.failed())
-                            LOGGER.warn("Data dumping failed for IP: {} \n Cause: {}", ip, future.cause().getMessage());
+                    if (future.failed())
+                        LOGGER.warn("Data dumping failed for IP: {} \n Cause: {}", ip, future.cause().getMessage());
 
-                        LOGGER.info("Received data for discovery profile ID: {}", jsonProfile.getString("discovery.id"));
+                    LOGGER.info("Received data for discovery profile ID: {}", jsonProfile.getString("discovery.id"));
 
-                        LOGGER.trace("Polled Data: {}", new JsonArray(decodedString).encode());
-                    }
+                    LOGGER.trace("Polled Data: {}", new JsonArray(encryptedData).encode());
                 }
-            }
-            else
-            {
-                LOGGER.warn("No data received from poller");
             }
         }
         catch (Exception exception)
         {
             LOGGER.error("Error in decrypting data: {}", exception.getMessage());
         }
+    }
+
+    @Override
+    public void stop() throws Exception
+    {
+        if (dealerSocket != null)
+        {
+            dealerSocket.close();
+        }
+        if (context != null)
+        {
+            context.close();
+        }
+        super.stop();
     }
 }

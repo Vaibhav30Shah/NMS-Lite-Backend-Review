@@ -16,17 +16,20 @@ public class DiscoveryDatabase implements Database
     {
         var ip = discovery.getString("ip");
 
-        int id = idCounter.getAndIncrement();
-
-        discoveries.forEach((key, value) ->
+        for (JsonObject existingDiscovery : discoveries.values())
         {
-            if (!value.getString("ip").equals(ip))
+            if (existingDiscovery.getString("ip").equals(ip))
             {
-                discovery.put(Constants.KEY_DISCOVERY_ID, id);
-
-                discoveries.put(id, discovery);
+                return -1;
             }
-        });
+        }
+
+        var id = idCounter.getAndIncrement();
+
+        discovery.put(Constants.KEY_DISCOVERY_ID, id);
+
+        discoveries.put(id, discovery);
+
         return id;
     }
 
@@ -63,6 +66,8 @@ public class DiscoveryDatabase implements Database
     {
         if (discoveries.containsKey(id) && !discoveries.get(id).containsKey("is.provisioned"))
         {
+            discoveries.get(id).getJsonArray("credetial.profile").add(new JsonObject().put("is.bound",false));
+
             discoveries.remove(id);
 
             return true;

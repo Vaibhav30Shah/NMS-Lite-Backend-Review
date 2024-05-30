@@ -2,7 +2,6 @@ package com.motadata.api;
 
 import com.motadata.constants.Constants;
 import com.motadata.db.CredentialDatabase;
-import com.motadata.db.Database;
 import com.motadata.db.DiscoveryDatabase;
 import com.motadata.util.Util;
 import io.vertx.core.Vertx;
@@ -47,7 +46,7 @@ public class Discovery
 
                                 if (credProfile != null)
                                 {
-                                    credProfile.put("is.bound",true);
+                                    credProfile.put("is.bound", true);
 
                                     processedCredentialProfiles.add(credProfile);
 
@@ -63,18 +62,25 @@ public class Discovery
                     {
                         discoveryProfile.put(Constants.CREDENTIAL_PROFILE, processedCredentialProfiles);
 
-                        discoveryDatabase.create(discoveryProfile);
+                        int id = discoveryDatabase.create(discoveryProfile);
 
-                        Util.successHandler(routingContext,"Discovery profile created successfully");
+                        if (id == -1)
+                        {
+                            Util.errorHandler(routingContext, Constants.BAD_REQUEST_STATUS, "Discovery Profile with this IP already exists");
+                        }
+                        else
+                        {
+                            Util.successHandler(routingContext, "Discovery profile created successfully");
+                        }
                     }
                     else
                     {
-                        Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"None of the credential profiles exist.");
+                        Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "None of the credential profiles exist.");
                     }
                 }
                 else
                 {
-                    Util.errorHandler(routingContext,Constants. BAD_REQUEST_STATUS,"Invalid discovery port");
+                    Util.errorHandler(routingContext, Constants.BAD_REQUEST_STATUS, "Invalid discovery port");
                 }
             }
             catch (Exception exception)
@@ -113,7 +119,7 @@ public class Discovery
                 }
                 else
                 {
-                    Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"Discovery profile not found");
+                    Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "Discovery profile not found");
                 }
             }
             catch (Exception exception)
@@ -154,21 +160,21 @@ public class Discovery
                     {
                         if (discoveryDatabase.update(updatedDiscoveryProfile, Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID))))
                         {
-                            Util.successHandler(routingContext,"Discovery profile updated successfully");
+                            Util.successHandler(routingContext, "Discovery profile updated successfully");
                         }
                         else
                         {
-                            Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"Discovery profile in use or not found");
+                            Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "Discovery profile in use or not found");
                         }
                     }
                     else
                     {
-                        Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"One or more credential profiles does not exist.");
+                        Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "One or more credential profiles does not exist.");
                     }
                 }
                 else
                 {
-                    Util.errorHandler(routingContext,Constants.BAD_REQUEST_STATUS,"Invalid Discovery port");
+                    Util.errorHandler(routingContext, Constants.BAD_REQUEST_STATUS, "Invalid Discovery port");
                 }
             }
             catch (Exception exception)
@@ -184,11 +190,11 @@ public class Discovery
             {
                 if (discoveryDatabase.delete(Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID))))
                 {
-                    Util.successHandler(routingContext,"Discovery profile deleted successfully");
+                    Util.successHandler(routingContext, "Discovery profile deleted successfully");
                 }
                 else
                 {
-                    Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"Discovery profile in use or not found");
+                    Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "Discovery profile in use or not found");
                 }
             }
             catch (Exception exception)
@@ -208,11 +214,11 @@ public class Discovery
                 {
                     vertx.eventBus().send(Constants.RUN_DISCOVERY_ADDRESS, discoveryProfileId);
 
-                    Util.successHandler(routingContext,"Your request is being processed. It will be served in 60 seconds.");
+                    Util.successHandler(routingContext, "Your request is being processed. It will be served in 60 seconds.");
                 }
                 else
                 {
-                    Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"Discovery profile not found");
+                    Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "Discovery profile not found");
                 }
             }
             catch (Exception exception)
@@ -228,7 +234,7 @@ public class Discovery
             {
                 var discoveryResults = discoveryDatabase.get(Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID)));
 
-                if (discoveryResults!=null && discoveryResults.containsKey("is.discovered"))
+                if (discoveryResults != null && discoveryResults.containsKey("is.discovered"))
                 {
                     routingContext.response()
                             .putHeader("Content-Type", "application/json")
@@ -236,7 +242,7 @@ public class Discovery
                 }
                 else
                 {
-                    Util.errorHandler(routingContext,Constants.NOT_FOUND_STATUS,"Discovery profile not found");
+                    Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "Discovery profile not found");
                 }
             }
             catch (Exception exception)

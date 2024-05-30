@@ -18,6 +18,8 @@ public class APIServer extends AbstractVerticle
 
         var router = Router.router(vertx);
 
+        var getPollingData = new GetHistoricalData(vertx);
+
         // Main routing
         router.route("/").handler(routingContext ->
                 routingContext.response().end("Welcome to NMS Lite"));
@@ -30,6 +32,9 @@ public class APIServer extends AbstractVerticle
 
         // Provisioning route
         router.route("/" + Constants.PROVISION_ROUTE + "/*").subRouter(Provision.getRouter(vertx));
+
+        // Polling Data route
+        router.route("/"+Constants.HISTORICAL_DATA_ROUTE+"/:ip").handler(getPollingData::handleGetPollingData);
 
         server.requestHandler(router).listen(Constants.PORT)
                 .onSuccess(event ->
