@@ -9,6 +9,9 @@
         </filter>
     </appender>
 
+
+
+    <!-- File Appenders -->
     <appender name="bootstrap" class="ch.qos.logback.core.FileAppender">
         <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/Bootstrap.log</file>
         <encoder>
@@ -52,7 +55,7 @@
     </appender>
 
     <appender name="polling" class="ch.qos.logback.core.FileAppender">
-        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/PollingEngine.log</file>
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/Poller.log</file>
         <encoder>
             <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
         </encoder>
@@ -65,11 +68,28 @@
         </encoder>
     </appender>
 
+    <appender name="scheduler" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/Scheduler.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="respro" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/ResponseProcessor.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
 
     <!-- Root Logger -->
     <root level="info">
         <appender-ref ref="STDOUT"/>
     </root>
+
+
 
     <!-- Logger for Server -->
     <logger name="com.motadata.api.APIServer" level="trace" additivity="false">
@@ -81,18 +101,15 @@
         <appender-ref ref="discovery"/>
     </logger>
 
-
     <!-- Logger for Credential Router  -->
     <logger name="com.motadata.api.Credential" level="trace" additivity="false">
         <appender-ref ref="credential"/>
     </logger>
 
-
     <!-- Logger for Discovery Router -->
     <logger name="com.motadata.api.Discovery" level="trace" additivity="false">
         <appender-ref ref="discovery"/>
     </logger>
-
 
     <!-- Logger for Provision  -->
     <logger name="com.motadata.api.Provision" level="trace" additivity="false">
@@ -104,14 +121,24 @@
         <appender-ref ref="processing"/>
     </logger>
 
-    <!-- Logger for Polling Engine  -->
-    <logger name="com.motadata.engine.PollingEngine" level="trace" additivity="false">
+    <!-- Logger for Poller  -->
+    <logger name="com.motadata.engine.Poller" level="trace" additivity="false">
         <appender-ref ref="polling"/>
     </logger>
 
     <!-- Logger for Historical Data  -->
     <logger name="com.motadata.api.GetHistoricalData" level="trace" additivity="false">
         <appender-ref ref="history"/>
+    </logger>
+
+    <!-- Logger for Scheduler  -->
+    <logger name="com.motadata.engine.Scheduler" level="trace" additivity="false">
+        <appender-ref ref="scheduler"/>
+    </logger>
+
+    <!-- Logger for Response Processor -->
+    <logger name="com.motadata.engine.ResponseProcessor" level="trace" additivity="false">
+        <appender-ref ref="respro"/>
     </logger>
 
     <!-- Logger for Bootstrap  -->

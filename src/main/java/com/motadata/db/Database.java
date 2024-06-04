@@ -17,8 +17,6 @@ public interface Database
 {
     AtomicInteger idCounter = new AtomicInteger(1);
 
-    Map<Integer, JsonArray> discoveryResults = new ConcurrentHashMap<>();
-
     //Methods
     int create(JsonObject data);
 

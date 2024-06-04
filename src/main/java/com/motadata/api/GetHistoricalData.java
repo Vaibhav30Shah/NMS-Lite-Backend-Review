@@ -27,11 +27,13 @@ public class GetHistoricalData
     {
         var ip = routingContext.pathParam("ip");
 
+        var time = routingContext.pathParam("time");
+
         vertx.<List<JsonObject>>executeBlocking(promise ->
         {
             try
             {
-                var pollingData = readPollingData(ip);
+                var pollingData = readPollingData(ip, Integer.parseInt(time));
 
                 promise.complete(pollingData);
             }
@@ -62,7 +64,7 @@ public class GetHistoricalData
         });
     }
 
-    private List<JsonObject> readPollingData(String ip)
+    private List<JsonObject> readPollingData(String ip, int time)
     {
         try
         {
@@ -81,15 +83,15 @@ public class GetHistoricalData
 
                 for (var entry : fileData)
                 {
-                    if (entry instanceof JsonObject jsonEntry)
+                    if (entry instanceof JsonObject jsonEntry)//TODOremve
                     {
                         pollingData.add(jsonEntry);
                     }
                 }
+
             }
             return pollingData;
         }
-
 
         catch (Exception exception)
         {

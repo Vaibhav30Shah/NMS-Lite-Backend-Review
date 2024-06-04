@@ -11,6 +11,8 @@ public class DiscoveryDatabase implements Database
 {
     private static final Map<Integer, JsonObject> discoveries = new ConcurrentHashMap<>();
 
+    public static Map<Integer, JsonArray> discoveredProfiles = new ConcurrentHashMap<>();
+
     @Override
     public int create(JsonObject discovery)
     {

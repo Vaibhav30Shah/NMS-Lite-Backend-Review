@@ -5,6 +5,7 @@ import com.motadata.db.DiscoveryDatabase;
 import com.motadata.util.Util;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
@@ -36,15 +37,12 @@ public class PollingEngine extends AbstractVerticle
 
         pushSocket = context.createSocket(SocketType.PUSH);
 
-        pullSocket= context.createSocket(SocketType.PULL);
+        pullSocket = context.createSocket(SocketType.PULL);
 
-        vertx.executeBlocking(promise ->
-        {
-            pushSocket.bind(Constants.ZMQ_SEND_ADDRESS);
+        pushSocket.bind(Constants.ZMQ_SEND_ADDRESS);
 
-            pullSocket.bind(Constants.ZMQ_RECEIVE_ADDRESS);
+        pullSocket.bind(Constants.ZMQ_RECEIVE_ADDRESS);
 
-        }, startPromise);
 
         vertx.setPeriodic(Constants.POLLING_INTERVAL * 1000, id ->
         {
@@ -125,7 +123,7 @@ public class PollingEngine extends AbstractVerticle
 
                     LOGGER.info("IP: {}", ip);
 
-                    var future = Util.dumpData(vertx, ip, encryptedData);
+                    var future = Util.dumpData(vertx, ip, Buffer.buffer(encryptedData));
 
                     if (future.succeeded())
                         LOGGER.info("Data dumped into file for IP: {}", ip);

@@ -2,15 +2,22 @@ package com.motadata.api;
 
 import com.motadata.constants.Constants;
 import com.motadata.db.CredentialDatabase;
+import com.motadata.db.Database;
 import com.motadata.db.DiscoveryDatabase;
+import com.motadata.engine.DiscoveryEngine;
 import com.motadata.util.Util;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Discovery
 {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DiscoveryEngine.class);
+
     static DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
 
     public static Router getRouter(Vertx vertx)
@@ -212,9 +219,9 @@ public class Discovery
 
                 if (discoveryDatabase.get(discoveryProfileId) != null)
                 {
-                    vertx.eventBus().send(Constants.RUN_DISCOVERY_ADDRESS, discoveryProfileId);
+                    vertx.eventBus().send(Constants.PING_CHECK_ADDRESS, discoveryProfileId);
 
-                    Util.successHandler(routingContext, "Your request is being processed. It will be served in 60 seconds.");
+                    Util.successHandler(routingContext, "Your request is being processed. Kindly check on /get-run-discovery-data/id");
                 }
                 else
                 {
@@ -232,21 +239,23 @@ public class Discovery
         {
             try
             {
-                var discoveryResults = discoveryDatabase.get(Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID)));
+                int discoveryProfileId = Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID));
 
-                if (discoveryResults != null && discoveryResults.containsKey("is.discovered"))
+                LOGGER.info("Discovery profile id: " + discoveryProfileId);
+
+                LOGGER.info("Data: " + DiscoveryDatabase.discoveredProfiles);
+
+                if(DiscoveryDatabase.discoveredProfiles.containsKey(discoveryProfileId))
                 {
                     routingContext.response()
                             .putHeader("Content-Type", "application/json")
-                            .end(discoveryResults.encode());
-                }
-                else
-                {
-                    Util.errorHandler(routingContext, Constants.NOT_FOUND_STATUS, "Discovery profile not found");
+                            .end(DiscoveryDatabase.discoveredProfiles.get(discoveryProfileId).encodePrettily());
                 }
             }
             catch (Exception exception)
             {
+                LOGGER.error("error", exception);
+
                 Util.exceptionHandler(routingContext, exception);
             }
         });

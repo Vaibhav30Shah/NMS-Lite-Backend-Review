@@ -44,6 +44,10 @@ public class Constants
 
     public static final String RUN_DISCOVERY_ADDRESS = "run-discovery-address";
 
+    public static final String PING_CHECK_ADDRESS = "ping-check-address";
+
+    public static final String GET_RUN_DISCOVERY_ADDRESS = "get-run-discovery-address";
+
     public static final String POLLING_DATA_STORE = "/home/vaibhav/IdeaProjects/NMS-Lite-Backend/files/";
 
     public static final String AES_KEY = "465DA7D9A240D75A561C084D3509BEF0";
@@ -53,4 +57,6 @@ public class Constants
     public static final String ZMQ_RECEIVE_ADDRESS="tcp://*:5556";
 
     public static final String HISTORICAL_DATA_ROUTE = "api/polling-data";
+
+    public static final String DATA_SEND_ADDRESS="send";
 }

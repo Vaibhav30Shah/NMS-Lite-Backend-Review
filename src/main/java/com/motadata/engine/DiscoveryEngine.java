@@ -14,14 +14,14 @@ import java.util.Base64;
 
 public class DiscoveryEngine extends AbstractVerticle
 {
-    static DiscoveryDatabase discoveryDatabase=new DiscoveryDatabase();
+    static DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DiscoveryEngine.class);
 
     @Override
     public void start(Promise<Void> startPromise)
     {
-        vertx.eventBus().localConsumer(Constants.RUN_DISCOVERY_ADDRESS, message ->
+        vertx.eventBus().localConsumer(Constants.PING_CHECK_ADDRESS, message ->
         {
             var discoveryID = (int) message.body();
 
@@ -29,68 +29,38 @@ public class DiscoveryEngine extends AbstractVerticle
 
             var ip = discoveryProfile.getString("ip");
 
-            //execBlocking because the process can be long and can block the event loop
+            var data=new JsonArray();
+
             vertx.<JsonArray>executeBlocking(promise ->
+            {
+                try
+                {
+                    if (Util.isPingSuccessful(ip))
                     {
-                        try
-                        {
-                            // Check if the IP is alive using fping
-                            if (Util.isPingSuccessful(ip))
-                            {
-                                LOGGER.info("PING Check Successful {}", ip);
+                        LOGGER.info("PING Check Successful {}", ip);
 
-                                discoveryProfile.put("plugin.type", "Discover");
+                        discoveryProfile.put("plugin.type", "Discover");
 
-                                discoveryProfile.put("is.discovered", true);
+                        discoveryProfile.put("is.discovered", true);
 
-                                // Encode the JSON and send it to the plugin engine
-                                var decodedString = Util.executeProcess(Base64.getEncoder().encodeToString(discoveryProfile.encode().getBytes()));
+                        data.add(discoveryProfile);
 
-                                if(decodedString!=null)
-                                {
-                                    var outputArray = new JsonArray();
-
-                                    outputArray.addAll(new JsonArray(decodedString));
-
-                                    discoveryProfile.put("is.valid",true);
-
-                                    promise.complete(outputArray);
-                                }
-                                else
-                                {
-                                    promise.fail("Something went wrong");
-                                }
-                            }
-                            else
-                            {
-                                promise.fail("The Specified device is not alive");
-
-                                LOGGER.warn("The specified device is not alive");
-                            }
-                        }
-                        catch (Exception exception)
-                        {
-                            LOGGER.error("Error in running discovery: {}", exception.getMessage());
-
-                            promise.fail(exception);
-                        }
+                        vertx.eventBus().send(Constants.RUN_DISCOVERY_ADDRESS, Base64.getEncoder().encodeToString(data.encode().getBytes()));
                     }
-                    , result ->
+                    else
                     {
-                        if (result.succeeded())
-                        {
-                            var outputArray = result.result();
+                        promise.fail("The Specified device is not alive");
 
-                            // Store the outputArray for later retrieval
-                            Database.discoveryResults.put(discoveryID, outputArray);
+                        LOGGER.warn("The specified device is not alive");
+                    }
+                }
+                catch (Exception exception)
+                {
+                    LOGGER.error("Error in running discovery: {}", exception.getMessage());
 
-                            LOGGER.trace("Discovery Result: {}", outputArray);
-                        }
-                        else
-                        {
-                            LOGGER.error("Error in running discovery: {}", result.cause().getMessage());
-                        }
-                    });
+                    promise.fail(exception);
+                }
+            });
         });
         startPromise.complete();
     }

@@ -34,7 +34,7 @@ public class APIServer extends AbstractVerticle
         router.route("/" + Constants.PROVISION_ROUTE + "/*").subRouter(Provision.getRouter(vertx));
 
         // Polling Data route
-        router.route("/"+Constants.HISTORICAL_DATA_ROUTE+"/:ip").handler(getPollingData::handleGetPollingData);
+        router.route("/"+Constants.HISTORICAL_DATA_ROUTE+"/:ip/:time").handler(getPollingData::handleGetPollingData);
 
         server.requestHandler(router).listen(Constants.PORT)
                 .onSuccess(event ->

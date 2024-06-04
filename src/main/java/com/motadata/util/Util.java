@@ -86,21 +86,19 @@ public class Util
         }
     }
 
-    public static Future<Void> dumpData(Vertx vertx, String ip, String decodedString)
+    public static Future<Void> dumpData(Vertx vertx, String ip, Buffer buffer)
     {
         Promise<Void> promise = Promise.promise();
 
         try
         {
-            var data = new JsonArray(decodedString);
+            var data = new JsonArray(buffer);
 
             var now = LocalDateTime.now();
 
             var dirPath = Constants.POLLING_DATA_STORE + ip;
 
             var fileName = Constants.POLLING_DATA_STORE + ip + "/" + now + ".txt";
-
-            var buffer = Buffer.buffer(data.encodePrettily());
 
             var fileSystem = vertx.fileSystem();
 
