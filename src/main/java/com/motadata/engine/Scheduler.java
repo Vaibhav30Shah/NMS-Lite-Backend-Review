@@ -27,7 +27,7 @@ public class Scheduler extends AbstractVerticle
 
             var provisionedDiscoveryProfiles = new JsonArray();
 
-            LOGGER.info("Discovery profiles: {}", discoveryProfiles);
+            LOGGER.trace("Discovery profiles: {}", discoveryProfiles);
 
             for (var profile : discoveryProfiles)
             {
@@ -52,11 +52,11 @@ public class Scheduler extends AbstractVerticle
     {
         try
         {
-            var provisionedProfiles = Base64.getEncoder().encode(provisionedDiscoveryProfiles.encode().getBytes());
+            var provisionedProfiles = Base64.getEncoder().encodeToString(provisionedDiscoveryProfiles.encode().getBytes());
 
-            LOGGER.info("Encoded provisioned profiles: {}", new String(provisionedProfiles));
+            LOGGER.info("Encoded provisioned profiles: {}", provisionedProfiles);
 
-            vertx.eventBus().send(Constants.DATA_SEND_ADDRESS, new String(provisionedProfiles));
+            vertx.eventBus().send(Constants.DATA_SEND_ADDRESS, provisionedProfiles);
         }
         catch (Exception e)
         {

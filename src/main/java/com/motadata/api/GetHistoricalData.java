@@ -18,6 +18,8 @@ public class GetHistoricalData
 
     private final Vertx vertx;
 
+    List<JsonObject> pollingData = new ArrayList<>();
+
     public GetHistoricalData(Vertx vertx)
     {
         this.vertx = vertx;
@@ -47,13 +49,9 @@ public class GetHistoricalData
         {
             if (res.succeeded())
             {
-                var pollingData = res.result();
-
-                var response = routingContext.response();
-
-                response.putHeader("Content-Type", "application/json");
-
-                response.end(new JsonArray(pollingData).encodePrettily());
+                routingContext.response()
+                        .putHeader("Content-Type", "application/json")
+                        .end(new JsonArray(res.result()).encodePrettily());
             }
             else
             {
@@ -70,8 +68,6 @@ public class GetHistoricalData
         {
             var dirPath = Constants.POLLING_DATA_STORE + ip;
 
-            List<JsonObject> pollingData = new ArrayList<>();
-
             var files = vertx.fileSystem().readDirBlocking(dirPath).stream()
                     .sorted(Comparator.reverseOrder())
                     .limit(10)
@@ -83,12 +79,8 @@ public class GetHistoricalData
 
                 for (var entry : fileData)
                 {
-                    if (entry instanceof JsonObject jsonEntry)//TODOremve
-                    {
-                        pollingData.add(jsonEntry);
-                    }
+                    pollingData.add(new JsonObject(entry.toString()));
                 }
-
             }
             return pollingData;
         }

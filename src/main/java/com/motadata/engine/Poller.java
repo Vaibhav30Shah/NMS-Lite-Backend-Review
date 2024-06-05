@@ -31,13 +31,13 @@ public class Poller extends AbstractVerticle
             pushSocket.bind(Constants.ZMQ_SEND_ADDRESS);
 
             //for run-discovery
-            vertx.eventBus().localConsumer(Constants.RUN_DISCOVERY_ADDRESS, message ->
+            vertx.eventBus().<String>localConsumer(Constants.RUN_DISCOVERY_ADDRESS, message ->
             {
                 try
                 {
-                    LOGGER.trace("Discovrery received for send: {}", message.body());
+                    LOGGER.trace("Discovery received for send: {}", message.body());
 
-                    pushSocket.send(message.body().toString(), ZMQ.DONTWAIT);
+                    pushSocket.send(message.body(), ZMQ.DONTWAIT);
                 }
                 catch (Exception exception)
                 {
@@ -46,13 +46,13 @@ public class Poller extends AbstractVerticle
             });
 
             //for polling
-            vertx.eventBus().localConsumer(Constants.DATA_SEND_ADDRESS, message ->
+            vertx.eventBus().<String>localConsumer(Constants.DATA_SEND_ADDRESS, message ->
             {
                 try
                 {
                     LOGGER.trace("Collect received for send: {}", message.body());
 
-                    pushSocket.send(message.body().toString(), ZMQ.DONTWAIT);
+                    pushSocket.send(message.body(), ZMQ.DONTWAIT);
 
                     LOGGER.info("Collect Sent");
                 }
@@ -71,7 +71,7 @@ public class Poller extends AbstractVerticle
     }
 
     @Override
-    public void stop() throws Exception
+    public void stop()
     {
         if (context != null)
             context.close();

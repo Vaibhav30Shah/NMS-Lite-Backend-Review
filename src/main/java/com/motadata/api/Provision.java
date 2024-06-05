@@ -1,8 +1,6 @@
 package com.motadata.api;
 
 import com.motadata.constants.Constants;
-import com.motadata.db.CredentialDatabase;
-import com.motadata.db.Database;
 import com.motadata.db.DiscoveryDatabase;
 import com.motadata.util.Util;
 import io.vertx.core.Vertx;
@@ -14,7 +12,7 @@ public class Provision
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(Provision.class);
 
-    static DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
+    private final static DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
 
     public static Router getRouter(Vertx vertx)
     {
@@ -31,7 +29,7 @@ public class Provision
 
                 if (discoveryProfile.containsKey("is.discovered"))
                 {
-                    if (discoveryProfile != null)
+                    if (!discoveryProfile.isEmpty())
                     {
                         discoveryProfile.put("plugin.type", "Collect");
 
@@ -39,8 +37,7 @@ public class Provision
 
                         LOGGER.info("Discovery Profile Updated Successfully");
 
-                        //TODO
-//                        LOGGER.trace("Provisioned Discovery IDs: {}", discoveryProfile.get());
+                        LOGGER.trace("Provisioned Discovery IDs: {}", discoveryProfile);
 
                         Util.successHandler(routingContext,"Discovery Profile Provisioned Successfully");
                     }

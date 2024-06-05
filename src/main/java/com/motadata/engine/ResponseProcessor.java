@@ -10,9 +10,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.zeromq.SocketType;
-import org.zeromq.ZContext;
-import org.zeromq.ZMQ;
 
 import java.util.Arrays;
 import java.util.Base64;
@@ -21,117 +18,75 @@ public class ResponseProcessor extends AbstractVerticle
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(ResponseProcessor.class);
 
-    private ZContext context;
-
-    private ZMQ.Socket pullSocket;
-
     @Override
-    public void start(Promise<Void> startPromise)
+    public void start(Promise<Void> startPromise) throws Exception
     {
         try
         {
-            LOGGER.info("Starting Response Processor");
-
-            context = new ZContext();
-
-            pullSocket = context.createSocket(SocketType.PULL);
-
-            pullSocket.bind(Constants.ZMQ_RECEIVE_ADDRESS);
-
-            new Thread(() ->
+            vertx.eventBus().<String>localConsumer(Constants.RESPONSE_PROCESS_ADDRESS, resultHandler ->
             {
-                while (true)
+                LOGGER.info("Data:{}", resultHandler.body());
+
+                var decodedData = Arrays.toString(Base64.getDecoder().decode(resultHandler.body()));
+
+                LOGGER.trace("Decoded data: {}", decodedData);
+
+                var data = new JsonArray(decodedData);
+
+                LOGGER.info("Received data from poller: {}", data.encode());
+
+                for (var profile : data)
                 {
-                    var reply = pullSocket.recv(0);
-
-                    if (reply != null)
+                    if (profile instanceof JsonObject jsonProfile)
                     {
-                        LOGGER.info("Recd result: {}", new String(reply));
+                        LOGGER.trace("JsonProfile:{}", jsonProfile);
 
-                        var decodedData = Base64.getDecoder().decode(reply);
-
-                        LOGGER.info("Decoded data: {}", new String(decodedData));
-
-                        JsonArray data = new JsonArray(new String(decodedData));
-
-                        LOGGER.info("Received data from poller: {}", data.encode());
-
-                        processData(data);
-                    }
-                    else
-                    {
-                        LOGGER.info("No response received");
-                    }
-                }
-            }).start();
-
-            startPromise.complete();
-        }
-        catch (Exception exception)
-        {
-            LOGGER.error("Error in starting response processor: ", exception);
-        }
-    }
-
-    private void processData(JsonArray data)
-    {
-        try
-        {
-            LOGGER.info("Data:{}", data.encode());
-
-            for (var profile : data)
-            {
-                if (profile instanceof JsonObject jsonProfile)
-                {
-                    LOGGER.info("JsonProfile:{}", jsonProfile);
-
-                    if (jsonProfile.getString("plugin.type").equals("Discover") && jsonProfile.getString("error").equals("[]"))
-                    {
-                        LOGGER.info("Sending discovery data to event bus: {}", jsonProfile.encodePrettily());
-
-                        DiscoveryDatabase.discoveredProfiles.put(jsonProfile.getInteger(Constants.KEY_DISCOVERY_ID), data);
-                    }
-                    else
-                    {
-                        var ip = jsonProfile.getString("ip");
-
-                        LOGGER.info("IP: {}", ip);
-
-                        vertx.<JsonArray>executeBlocking(handler ->
+                        if (jsonProfile.getString("plugin.type").equals("Discover") && jsonProfile.getString("error").equals("[]"))
                         {
-                            var future = Util.dumpData(vertx, ip, Buffer.buffer(data.encodePrettily()));
+                            LOGGER.info("Sending discovery data to event bus: {}", jsonProfile.encodePrettily());
 
-                            if (future.succeeded())
-                                LOGGER.info("Data dumped into file for IP: {}", ip);
+                            DiscoveryDatabase.discoveredProfiles.put(jsonProfile.getInteger(Constants.KEY_DISCOVERY_ID), data);
+                        }
+                        else if (jsonProfile.getString("plugin.type").equals("Discover") && !jsonProfile.getString("error").equals("[]"))
+                        {
+                            LOGGER.info("Error in Discovery data: {}", jsonProfile.encodePrettily());
+                        }
+                        else if (jsonProfile.getString("plugin.type").equals("Collect") && jsonProfile.getString("error").equals("[]"))
+                        {
+                            var ip = jsonProfile.getString("ip");
 
-                            if (future.failed())
-                                LOGGER.warn("Data dumping failed for IP: {} \n Cause: {}", ip, future.cause().getMessage());
-                        });
+                            LOGGER.info("IP: {}", ip);
 
-                        LOGGER.info("Received data for discovery profile ID: {}", jsonProfile.getString("discovery.profile.id"));
+                            vertx.executeBlocking(handler ->
+                            {
+                                var future = Util.dumpData(vertx, ip, Buffer.buffer(data.encodePrettily()));
 
-                        LOGGER.trace("Polled Data: {}", new JsonArray(data.encodePrettily()));
+                                if (future.succeeded())
+                                    LOGGER.info("Data dumped into file for IP: {}", ip);
+
+                                if (future.failed())
+                                    LOGGER.warn("Data dumping failed for IP: {} \n Cause: {}", ip, future.cause().getMessage());
+                            });
+
+                            LOGGER.info("Received data for discovery profile ID: {}", jsonProfile.getString(Constants.KEY_DISCOVERY_ID));
+
+                            LOGGER.trace("Polled Data: {}", data.encodePrettily());
+                        }
+                        else
+                        {
+                            LOGGER.error("Error in Collect data: {}", jsonProfile.encodePrettily());
+                        }
+                    }
+                    else
+                    {
+                        LOGGER.info("Not instance of JSON Profiles");
                     }
                 }
-                else
-                {
-                    LOGGER.info("Not instance of JSON Profiles");
-                }
-            }
+            });
         }
         catch (Exception exception)
         {
-            LOGGER.error("Error in processing data: {}", exception.toString());
+            LOGGER.error("Error in processing data: ", exception);
         }
-    }
-
-    @Override
-    public void stop()
-    {
-        if (context != null)
-            context.close();
-
-        if (pullSocket != null)
-            pullSocket.close();
     }
 }

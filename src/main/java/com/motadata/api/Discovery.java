@@ -2,7 +2,6 @@ package com.motadata.api;
 
 import com.motadata.constants.Constants;
 import com.motadata.db.CredentialDatabase;
-import com.motadata.db.Database;
 import com.motadata.db.DiscoveryDatabase;
 import com.motadata.engine.DiscoveryEngine;
 import com.motadata.util.Util;
@@ -15,10 +14,9 @@ import org.slf4j.LoggerFactory;
 
 public class Discovery
 {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(DiscoveryEngine.class);
 
-    static DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
+    private static final DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
 
     public static Router getRouter(Vertx vertx)
     {
@@ -39,28 +37,25 @@ public class Discovery
 
                     var atLeastOneProfileFound = false;
 
-                    for (Object credentialProfileObj : credentialProfileIds)
+                    for (var credentialProfileObj : credentialProfileIds)
                     {
-                        if (credentialProfileObj instanceof JsonObject credentialProfileJson)
+                        var id = ((JsonObject) credentialProfileObj).getInteger(Constants.KEY_CREDENTIAL_ID);
+
+                        if (id != null)
                         {
-                            Integer id = credentialProfileJson.getInteger(Constants.KEY_CREDENTIAL_ID);
+                            var credentialDatabase = new CredentialDatabase();
 
-                            if (id != null)
+                            var credProfile = credentialDatabase.get(id);
+
+                            if (credProfile != null)
                             {
-                                var credentialDatabase = new CredentialDatabase();
+                                credProfile.put("is.bound", true);
 
-                                JsonObject credProfile = credentialDatabase.get(id);
+                                processedCredentialProfiles.add(credProfile);
 
-                                if (credProfile != null)
-                                {
-                                    credProfile.put("is.bound", true);
+                                atLeastOneProfileFound = true;
 
-                                    processedCredentialProfiles.add(credProfile);
-
-                                    atLeastOneProfileFound = true;
-
-                                    break;
-                                }
+                                break;
                             }
                         }
                     }
@@ -69,7 +64,7 @@ public class Discovery
                     {
                         discoveryProfile.put(Constants.CREDENTIAL_PROFILE, processedCredentialProfiles);
 
-                        int id = discoveryDatabase.create(discoveryProfile);
+                        var id = discoveryDatabase.create(discoveryProfile);
 
                         if (id == -1)
                         {
@@ -150,16 +145,13 @@ public class Discovery
 
                     for (var credentialProfileObj : credentialProfileIds)
                     {
-                        if (credentialProfileObj instanceof JsonObject credentialProfileJson)
+                        var credentialId = ((JsonObject) credentialProfileObj).getInteger(Constants.KEY_CREDENTIAL_ID);
+
+                        if (credentialId != null && discoveryDatabase.get(credentialId) == null)
                         {
-                            var credentialId = credentialProfileJson.getInteger(Constants.KEY_CREDENTIAL_ID);
+                            allCredentialsExist = false;
 
-                            if (credentialId != null && discoveryDatabase.get(credentialId) == null)
-                            {
-                                allCredentialsExist = false;
-
-                                break;
-                            }
+                            break;
                         }
                     }
 
@@ -239,22 +231,29 @@ public class Discovery
         {
             try
             {
-                int discoveryProfileId = Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID));
+                var discoveryProfileId = Integer.parseInt(routingContext.request().getParam(Constants.DISCOVERY_PROFILE_ID));
 
-                LOGGER.info("Discovery profile id: " + discoveryProfileId);
+                LOGGER.info("Discovery profile id: {}", discoveryProfileId);
 
-                LOGGER.info("Data: " + DiscoveryDatabase.discoveredProfiles);
+                LOGGER.trace("Data: {}", DiscoveryDatabase.discoveredProfiles);
 
-                if(DiscoveryDatabase.discoveredProfiles.containsKey(discoveryProfileId))
+                if (DiscoveryDatabase.discoveredProfiles.containsKey(discoveryProfileId))
                 {
                     routingContext.response()
                             .putHeader("Content-Type", "application/json")
                             .end(DiscoveryDatabase.discoveredProfiles.get(discoveryProfileId).encodePrettily());
                 }
+                else
+                {
+                    routingContext.response()
+                            .putHeader("Content-Type", "application/json")
+                            .setStatusCode(102)
+                            .end(new JsonObject().put("message", "Your data is not present or may take some time. Please refresh.").put(Constants.STATUS, "102").encodePrettily());
+                }
             }
             catch (Exception exception)
             {
-                LOGGER.error("error", exception);
+                LOGGER.error("Error ", exception);
 
                 Util.exceptionHandler(routingContext, exception);
             }

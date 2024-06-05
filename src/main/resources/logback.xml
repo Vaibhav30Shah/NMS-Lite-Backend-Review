@@ -137,7 +137,7 @@
     </logger>
 
     <!-- Logger for Response Processor -->
-    <logger name="com.motadata.engine.ResponseProcessor" level="trace" additivity="false">
+    <logger name="com.motadata.engine.ResponseReceiver" level="trace" additivity="false">
         <appender-ref ref="respro"/>
     </logger>
 

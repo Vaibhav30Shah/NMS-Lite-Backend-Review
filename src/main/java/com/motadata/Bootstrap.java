@@ -18,8 +18,9 @@ public class Bootstrap
                 .compose(future -> vertx.deployVerticle(DiscoveryEngine.class.getName()))
                 .compose(future -> vertx.deployVerticle(Scheduler.class.getName()))
                 .compose(future -> vertx.deployVerticle(Poller.class.getName()))
-                .compose(future -> vertx.deployVerticle(ResponseProcessor.class.getName()))
-                .onSuccess(event -> LOGGER.info("API Server, Discovery Engine Engine and Scheduling Engine deployed successfully"))
-                .onFailure(event -> LOGGER.info("API Server, Discovery Engine and Scheduling Engine deployment failed: {}", event.getCause().toString()));
+                .compose(future -> vertx.deployVerticle(ResponseReceiver.class.getName()))
+                .compose(future->vertx.deployVerticle(ResponseProcessor.class.getName()))
+                .onSuccess(event -> LOGGER.info("Everything deployed successfully"))
+                .onFailure(event -> LOGGER.info("Deployment failed: {}", event.getCause().toString()));
     }
 }

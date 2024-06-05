@@ -2,14 +2,13 @@ package com.motadata.api;
 
 import com.motadata.constants.Constants;
 import com.motadata.db.CredentialDatabase;
-import com.motadata.db.DiscoveryDatabase;
 import com.motadata.util.Util;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.Router;
 
 public class Credential
 {
-    static CredentialDatabase credentialDatabase = new CredentialDatabase();
+    private final static CredentialDatabase credentialDatabase = new CredentialDatabase();
 
     public static Router getRouter(Vertx vertx)
     {
@@ -114,20 +113,6 @@ public class Credential
         {
             try
             {
-                //TODO:left
-                var discovery = new DiscoveryDatabase();
-
-                var cred = new CredentialDatabase();
-
-                var discoveryProfiles = discovery.get();
-
-//                var credProfile = discoveryProfiles.getJsonArray(Constants.CREDENTIAL_PROFILE);
-
-                for (var discoveryProfile : discoveryProfiles)
-                {
-
-                }
-
                 if (credentialDatabase.delete(Integer.parseInt(routingContext.request().getParam(Constants.CREDENTIAL_PROFILE_ID))))
                 {
                     Util.successHandler(routingContext, "Credential profile deleted successfully");
