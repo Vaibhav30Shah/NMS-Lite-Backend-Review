@@ -1,11 +1,11 @@
 package com.motadata.api;
 
+import com.motadata.Bootstrap;
 import com.motadata.constants.Constants;
 import com.motadata.db.CredentialDatabase;
 import com.motadata.db.DiscoveryDatabase;
 import com.motadata.engine.DiscoveryEngine;
 import com.motadata.util.Util;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
@@ -18,10 +18,8 @@ public class Discovery
 
     private static final DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
 
-    public static Router getRouter(Vertx vertx)
+    public static Router getRouter(Router router)
     {
-        Router router = Router.router(vertx);
-
         // Create a new discovery profile
         router.post("/").handler(routingContext -> routingContext.request().bodyHandler(body ->
         {
@@ -211,7 +209,7 @@ public class Discovery
 
                 if (discoveryDatabase.get(discoveryProfileId) != null)
                 {
-                    vertx.eventBus().send(Constants.PING_CHECK_ADDRESS, discoveryProfileId);
+                    Bootstrap.getVertx().eventBus().send(Constants.PING_CHECK_ADDRESS, discoveryProfileId);
 
                     Util.successHandler(routingContext, "Your request is being processed. Kindly check on /get-run-discovery-data/id");
                 }
@@ -245,10 +243,7 @@ public class Discovery
                 }
                 else
                 {
-                    routingContext.response()
-                            .putHeader("Content-Type", "application/json")
-                            .setStatusCode(102)
-                            .end(new JsonObject().put("message", "Your data is not present or may take some time. Please refresh.").put(Constants.STATUS, "102").encodePrettily());
+                    Util.errorHandler(routingContext, 102, "Your request not found or may take some time. Kindly refresh after some time");
                 }
             }
             catch (Exception exception)

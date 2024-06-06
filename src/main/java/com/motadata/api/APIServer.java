@@ -18,23 +18,29 @@ public class APIServer extends AbstractVerticle
 
         var router = Router.router(vertx);
 
-        var getPollingData = new GetHistoricalData(vertx);
+        var credentialSubRouter = Router.router(vertx);
+
+        var discoverySubRouter = Router.router(vertx);
+
+        var provisionSubRouter = Router.router(vertx);
+
+        var getPollingData = new GetHistoricalData();
 
         // Main routing
         router.route("/").handler(routingContext ->
                 routingContext.response().end("Welcome to NMS Lite"));
 
         // Credential Profile route
-        router.route("/" + Constants.CREDENTIAL_ROUTE + "/*").subRouter(Credential.getRouter(vertx));
+        router.route("/" + Constants.CREDENTIAL_ROUTE + "/*").subRouter(Credential.getRouter(credentialSubRouter));
 
         // Discovery Profile route
-        router.route("/" + Constants.DISCOVERY_ROUTE + "/*").subRouter(Discovery.getRouter(vertx));
+        router.route("/" + Constants.DISCOVERY_ROUTE + "/*").subRouter(Discovery.getRouter(discoverySubRouter));
 
         // Provisioning route
-        router.route("/" + Constants.PROVISION_ROUTE + "/*").subRouter(Provision.getRouter(vertx));
+        router.route("/" + Constants.PROVISION_ROUTE + "/*").subRouter(Provision.getRouter(provisionSubRouter));
 
         // Polling Data route
-        router.route("/"+Constants.HISTORICAL_DATA_ROUTE+"/:ip/:time").handler(getPollingData::handleGetPollingData);
+        router.route("/"+Constants.HISTORICAL_DATA_ROUTE+"/:ip").handler(getPollingData::handleGetPollingData);
 
         server.requestHandler(router).listen(Constants.PORT)
                 .onSuccess(event ->

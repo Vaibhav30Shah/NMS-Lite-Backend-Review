@@ -3,17 +3,14 @@ package com.motadata.api;
 import com.motadata.constants.Constants;
 import com.motadata.db.CredentialDatabase;
 import com.motadata.util.Util;
-import io.vertx.core.Vertx;
 import io.vertx.ext.web.Router;
 
 public class Credential
 {
     private final static CredentialDatabase credentialDatabase = new CredentialDatabase();
 
-    public static Router getRouter(Vertx vertx)
+    public static Router getRouter(Router router)
     {
-        var router = Router.router(vertx);
-
         // Create credential profile
         router.post("/").handler(routingContext -> routingContext.request().bodyHandler(body ->
         {

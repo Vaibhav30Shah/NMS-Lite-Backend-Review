@@ -75,6 +75,13 @@
         </encoder>
     </appender>
 
+    <appender name="resrecv" class="ch.qos.logback.core.FileAppender">
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/ResponseProcessor.log</file>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
+        </encoder>
+    </appender>
+
     <appender name="respro" class="ch.qos.logback.core.FileAppender">
         <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/ResponseProcessor.log</file>
         <encoder>
@@ -136,8 +143,13 @@
         <appender-ref ref="scheduler"/>
     </logger>
 
-    <!-- Logger for Response Processor -->
+    <!-- Logger for Response Receiver -->
     <logger name="com.motadata.engine.ResponseReceiver" level="trace" additivity="false">
+        <appender-ref ref="resrecv"/>
+    </logger>
+
+    <!-- Logger for Response Processor -->
+    <logger name="com.motadata.engine.ResponseProcessor" level="trace" additivity="false">
         <appender-ref ref="respro"/>
     </logger>
 

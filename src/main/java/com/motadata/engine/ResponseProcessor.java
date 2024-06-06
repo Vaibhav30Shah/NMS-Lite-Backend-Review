@@ -11,7 +11,6 @@ import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.Base64;
 
 public class ResponseProcessor extends AbstractVerticle
@@ -27,9 +26,9 @@ public class ResponseProcessor extends AbstractVerticle
             {
                 LOGGER.info("Data:{}", resultHandler.body());
 
-                var decodedData = Arrays.toString(Base64.getDecoder().decode(resultHandler.body()));
+                var decodedData = new String(Base64.getDecoder().decode(resultHandler.body()));
 
-                LOGGER.trace("Decoded data: {}", decodedData);
+                LOGGER.info("Decoded data: {}", decodedData);
 
                 var data = new JsonArray(decodedData);
 
@@ -43,9 +42,9 @@ public class ResponseProcessor extends AbstractVerticle
 
                         if (jsonProfile.getString("plugin.type").equals("Discover") && jsonProfile.getString("error").equals("[]"))
                         {
-                            LOGGER.info("Sending discovery data to event bus: {}", jsonProfile.encodePrettily());
+                            LOGGER.info("Saving discovery data: {}", jsonProfile.encodePrettily());
 
-                            DiscoveryDatabase.discoveredProfiles.put(jsonProfile.getInteger(Constants.KEY_DISCOVERY_ID), data);
+                            DiscoveryDatabase.discoveredProfiles.put(jsonProfile.getInteger(Constants.KEY_DISCOVERY_ID), jsonProfile);
                         }
                         else if (jsonProfile.getString("plugin.type").equals("Discover") && !jsonProfile.getString("error").equals("[]"))
                         {

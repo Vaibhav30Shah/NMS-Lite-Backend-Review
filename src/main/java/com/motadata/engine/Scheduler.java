@@ -1,6 +1,7 @@
 package com.motadata.engine;
 
 import com.motadata.constants.Constants;
+import com.motadata.db.DiscoveryDatabase;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -10,34 +11,34 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Base64;
 
-import static com.motadata.engine.DiscoveryEngine.discoveryDatabase;
-
 public class Scheduler extends AbstractVerticle
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(Scheduler.class);
 
+    private static final DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
+
     @Override
     public void start(Promise<Void> startPromise) throws Exception
     {
+        var provisionedDiscoveryProfiles = new JsonArray();
+
         vertx.setPeriodic(Constants.POLLING_INTERVAL * 1000, id ->
         {
             LOGGER.info("Scheduler interval started again");
 
-            var discoveryProfiles = discoveryDatabase.get();
+            provisionedDiscoveryProfiles.clear();
 
-            var provisionedDiscoveryProfiles = new JsonArray();
+            var discoveryProfiles = DiscoveryDatabase.discoveredProfiles;
 
             LOGGER.trace("Discovery profiles: {}", discoveryProfiles);
 
-            for (var profile : discoveryProfiles)
+            discoveryProfiles.forEach((key, entries) ->
             {
-                if (profile instanceof JsonObject jsonProfile && jsonProfile.containsKey("is.provisioned"))
-                {
-                    provisionedDiscoveryProfiles.add(jsonProfile);
-                }
-            }
+                if (entries.containsKey("is.provisioned"))
+                    provisionedDiscoveryProfiles.add(entries);
+            });
 
-            LOGGER.info("Provisioned Discovery profiles: {}", provisionedDiscoveryProfiles);
+            LOGGER.trace("Provisioned Discovery profiles: {}", provisionedDiscoveryProfiles);
 
             if (!provisionedDiscoveryProfiles.isEmpty())
             {

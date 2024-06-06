@@ -37,7 +37,7 @@ public class Poller extends AbstractVerticle
                 {
                     LOGGER.trace("Discovery received for send: {}", message.body());
 
-                    pushSocket.send(message.body(), ZMQ.DONTWAIT);
+                    pushSocket.send(message.body(), 0);
                 }
                 catch (Exception exception)
                 {
@@ -52,7 +52,7 @@ public class Poller extends AbstractVerticle
                 {
                     LOGGER.trace("Collect received for send: {}", message.body());
 
-                    pushSocket.send(message.body(), ZMQ.DONTWAIT);
+                    pushSocket.send(message.body(),0);
 
                     LOGGER.info("Collect Sent");
                 }

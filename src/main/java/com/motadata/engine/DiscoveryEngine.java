@@ -13,7 +13,7 @@ import java.util.Base64;
 
 public class DiscoveryEngine extends AbstractVerticle
 {
-    static DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
+    private static final DiscoveryDatabase discoveryDatabase = new DiscoveryDatabase();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DiscoveryEngine.class);
 
@@ -40,8 +40,6 @@ public class DiscoveryEngine extends AbstractVerticle
 
                         discoveryProfile.put("plugin.type", "Discover");
 
-                        discoveryProfile.put("is.discovered", true);
-
                         data.add(discoveryProfile);
 
                         promise.complete(data);
@@ -57,7 +55,7 @@ public class DiscoveryEngine extends AbstractVerticle
 
                     promise.fail(exception);
                 }
-            }, false, asyncHandler ->
+            }, asyncHandler ->
             {
                 if (asyncHandler.succeeded())
                 {

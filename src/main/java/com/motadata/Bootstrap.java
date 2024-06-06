@@ -12,6 +12,11 @@ public class Bootstrap
 
     private static final Vertx vertx = Vertx.vertx();
 
+    public static Vertx getVertx()
+    {
+        return vertx;
+    }
+
     public static void main(String[] args)
     {
         vertx.deployVerticle(APIServer.class.getName())
