@@ -76,7 +76,7 @@
     </appender>
 
     <appender name="resrecv" class="ch.qos.logback.core.FileAppender">
-        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/ResponseProcessor.log</file>
+        <file>/home/vaibhav/IdeaProjects/NMS-Lite-Backend/logs/ResponseReceiver.log</file>
         <encoder>
             <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%thread] [%-5level] [%file:%line] %msg%n</pattern>
         </encoder>

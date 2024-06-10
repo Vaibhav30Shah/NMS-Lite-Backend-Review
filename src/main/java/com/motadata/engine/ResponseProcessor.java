@@ -25,62 +25,50 @@ public class ResponseProcessor extends AbstractVerticle
             vertx.eventBus().<String>localConsumer(Constants.RESPONSE_PROCESS_ADDRESS, resultHandler ->
             {
                 LOGGER.info("Data:{}", resultHandler.body());
-
                 var decodedData = new String(Base64.getDecoder().decode(resultHandler.body()));
 
                 LOGGER.info("Decoded data: {}", decodedData);
 
-                var data = new JsonArray(decodedData);
+                var data = new JsonObject(decodedData);
 
-                LOGGER.info("Received data from poller: {}", data.encode());
+                LOGGER.trace("JsonProfile:{}", data);
 
-                for (var profile : data)
+                if (data.getString("plugin.type").equals("Discover") && data.getString("error").equals("[]"))
                 {
-                    if (profile instanceof JsonObject jsonProfile)
-                    {
-                        LOGGER.trace("JsonProfile:{}", jsonProfile);
+                    LOGGER.info("Saving discovery data: {}", data.encodePrettily());
 
-                        if (jsonProfile.getString("plugin.type").equals("Discover") && jsonProfile.getString("error").equals("[]"))
-                        {
-                            LOGGER.info("Saving discovery data: {}", jsonProfile.encodePrettily());
-
-                            DiscoveryDatabase.discoveredProfiles.put(jsonProfile.getInteger(Constants.KEY_DISCOVERY_ID), jsonProfile);
-                        }
-                        else if (jsonProfile.getString("plugin.type").equals("Discover") && !jsonProfile.getString("error").equals("[]"))
-                        {
-                            LOGGER.info("Error in Discovery data: {}", jsonProfile.encodePrettily());
-                        }
-                        else if (jsonProfile.getString("plugin.type").equals("Collect") && jsonProfile.getString("error").equals("[]"))
-                        {
-                            var ip = jsonProfile.getString("ip");
-
-                            LOGGER.info("IP: {}", ip);
-
-                            vertx.executeBlocking(handler ->
-                            {
-                                var future = Util.dumpData(vertx, ip, Buffer.buffer(data.encodePrettily()));
-
-                                if (future.succeeded())
-                                    LOGGER.info("Data dumped into file for IP: {}", ip);
-
-                                if (future.failed())
-                                    LOGGER.warn("Data dumping failed for IP: {} \n Cause: {}", ip, future.cause().getMessage());
-                            });
-
-                            LOGGER.info("Received data for discovery profile ID: {}", jsonProfile.getString(Constants.KEY_DISCOVERY_ID));
-
-                            LOGGER.trace("Polled Data: {}", data.encodePrettily());
-                        }
-                        else
-                        {
-                            LOGGER.error("Error in Collect data: {}", jsonProfile.encodePrettily());
-                        }
-                    }
-                    else
-                    {
-                        LOGGER.info("Not instance of JSON Profiles");
-                    }
+                    DiscoveryDatabase.discoveredProfiles.put(data.getInteger(Constants.KEY_DISCOVERY_ID), data);
                 }
+                else if (data.getString("plugin.type").equals("Discover") && !data.getString("error").equals("[]"))
+                {
+                    LOGGER.info("Error in Discovery data: {}", data.encodePrettily());
+                }
+                else if (data.getString("plugin.type").equals("Collect") && data.getString("error").equals("[]"))
+                {
+                    var ip = data.getString("ip");
+
+                    LOGGER.info("IP: {}", ip);
+
+                    vertx.executeBlocking(handler ->
+                    {
+                        var future = Util.dumpData(vertx, ip, Buffer.buffer(data.encodePrettily()));
+
+                        if (future.succeeded())
+                            LOGGER.info("Data dumped into file for IP: {}", ip);
+
+                        if (future.failed())
+                            LOGGER.warn("Data dumping failed for IP: {} \n Cause: {}", ip, future.cause().getMessage());
+                    });
+
+                    LOGGER.info("Received data for discovery profile ID: {}", data.getString(Constants.KEY_DISCOVERY_ID));
+
+                    LOGGER.trace("Polled Data: {}", data.encodePrettily());
+                }
+                else
+                {
+                    LOGGER.error("Error in Collect data: {}", data.encodePrettily());
+                }
+
             });
         }
         catch (Exception exception)
